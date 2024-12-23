@@ -9,6 +9,16 @@ let playerColor; // To store the player's color
 let diceResults = []; // Store current dice results
 let rollsLeft = 3; // Maximum rolls allowed
 
+const emptyBoard = [
+        ['', '', '', '', ''],
+        ['', '', '', '', ''],
+        ['', '', '', '', ''],
+        ['', '', '', '', ''],
+        ['', '', '', '', ''],
+    ]
+setupBoard(emptyBoard,[]);
+
+
 document.getElementById('startGame').onclick = () => {
     const gameCode = generateGameCode();
     socket.emit('startGame', gameCode);
@@ -20,7 +30,7 @@ document.getElementById('joinGame').onclick = () => {
 };
 
 socket.on('gameStarted', (code) => {
-    alert(`Game started with code: ${code}`);
+    document.getElementById('gameCode').value = `${code}`;
 });
 
 socket.on('playerTurn', (player) => {
@@ -28,25 +38,32 @@ socket.on('playerTurn', (player) => {
         clearDices();
     }
     currentPlayer = player;
-    console.log("currentPlayer", currentPlayer)
+    console.log(`It is player ${currentPlayer}'s turn.`)
+
+    if(currentPlayer === 'black') {
+        document.getElementById('black-turn-indicator').style.visibility = 'visible';
+        document.getElementById('white-turn-indicator').style.visibility = 'hidden';
+    } else {
+        document.getElementById('black-turn-indicator').style.visibility = 'hidden';
+        document.getElementById('white-turn-indicator').style.visibility = 'visible';
+    }
     if(currentPlayer === playerColor) {
-        document.getElementById('currentPlayersTurn').innerText = `Its your turn!`;
         document.getElementById('rollDiceButton').style.display = 'block';
     } else {
-        document.getElementById('currentPlayersTurn').innerText = `Waiting for your opponent to play!`;
         document.getElementById('rollDiceButton').style.display = 'none';
     }
-    resetRolls(); // Reset rolls when it's the player's turn
+    resetRolls();
 });
 
-socket.on('setupBoard', () => {
-    setupBoard(); // Call setupBoard when notified
+socket.on('setupBoard', ({ boardLayout, board }) => {
+    setupBoard(boardLayout, board); // Call setupBoard when notified
+    document.getElementById('controlls').style.visibility = `visible`
 });
 
 socket.on('playerColor', (data) => {
     playerColor = data.color; // Store player's color
     console.log(`You are playing as: ${playerColor}`);
-    document.getElementById('playerName').innerText = `You are Player: ${playerColor}`
+    document.getElementById('playerName').innerText = `${playerColor}`
 });
 
 socket.on('opponentJoined', (data) => {
@@ -93,7 +110,10 @@ document.getElementById('rollDiceButton').onclick = () => {
     if (currentPlayer === playerColor) { // Ensure it's player's turn
         console.log("Sending rollDiceRequest to server: ", playerColor)
         const keepArray = Array.from(document.querySelectorAll('.dice')).map(die => die.classList.contains('kept'));
-        socket.emit('rollDiceRequest', keepArray); // Send which dice to keep to the server
+        const betField = document.getElementById('betField').value;
+        // socket.emit('rollDiceRequest', keepArray); // Send which dice to keep to the server
+        socket.emit('rollDiceRequest', { keep: keepArray, bet: betField || null });
+
     } else {
         alert("It's not your turn!");
     }
@@ -104,11 +124,6 @@ function keepDice(index) {
     const dieElement = document.querySelectorAll('.dice')[index];
     dieElement.classList.toggle('kept'); // Toggle kept class for visual feedback
 }
-
-// socket.on('diceRolled', ({ results, rollsLeft }) => {
-//     displayDiceResults(results);
-//     updateRollsLeft(rollsLeft); // Update remaining rolls on UI
-// });
 
 socket.on('unableToMark', ({ player }) => {
     // cant play
@@ -137,19 +152,13 @@ function updateRollsLeft(rollsLeft) {
     document.getElementById('remainingRolls').innerText = `Rolls left: ${rollsLeft}`;
 }
 
-function setupBoard() {
+function setupBoard(boardLayout, boardState) {
     const board = document.getElementById('board');
     board.innerHTML = '';
-
-    // Define the board layout
-    const boardLayout = [
-        [4, 5, 'Four of a kind', 2, 3],
-        [1, 'High Low', 'Straight', 'Cash', 6],
-        ['Straight', 'Call', 'Kniffel', 'Full House', 'High Low'],
-        [5, 'Full House', 'Cash', 'Four of a kind', 2],
-        [6, 4, 'Call', 3, 1]
-    ];
-
+      // while (board.firstChild) {
+      //   board.removeChild(board.lastChild);
+      // }
+      // console.log("test", boardLayout)
     // Create cells based on the board layout
     boardLayout.forEach((row, rowIndex) => {
         row.forEach((cellContent, colIndex) => {
@@ -161,6 +170,7 @@ function setupBoard() {
             board.appendChild(cell);
         });
     });
+    updateCellDisplay(boardState);
 }
 
 function markCell(index) {
@@ -264,16 +274,6 @@ function displayDiceResults(results) {
     });
 }
 
-function updateCellDisplay2(board) {
-   const boardCells = document.querySelectorAll('.cell');
-   const cellToUpdate = boardCells[index];
-   if (player === 'white') {
-       cellToUpdate.style.backgroundColor = 'lightgray'; // Example color for white player
-   } else if (player === 'black') {
-       cellToUpdate.style.backgroundColor = 'darkgray'; // Example color for black player
-   }
-}
-
 function updateCellDisplay(board) {
     const boardCells = document.querySelectorAll('.cell'); // Select all cells in the board
     board.forEach((row, rowIndex) => {
@@ -293,7 +293,6 @@ function updateCellDisplay(board) {
     });
 }
 
-// Optional: Add any additional functions you need for game logic here
 
 function generateGameCode() {
     return Math.random().toString(36).substring(2, 7).toUpperCase(); // Generate a random alphanumeric code

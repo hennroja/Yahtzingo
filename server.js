@@ -21,9 +21,9 @@ function initializeBoardLayout() {
     return [
         [4, 5, 'Four of a kind', 2, 3],
         [1, 'High Low', 'Straight', 'Cash', 6],
-        ['Straight', 'Call', 'Kniffel', 'Full House', 'High Low'],
+        ['Straight', 'Bet', 'Kniffel', 'Full House', 'High Low'],
         [5, 'Full House', 'Cash', 'Four of a kind', 2],
-        [6, 4, 'Call', 3, 1]
+        [6, 4, 'Bet', 3, 1]
     ];
 }
 
@@ -61,18 +61,19 @@ io.on('connection', (socket) => {
         socket.join(code);
         socket.emit('gameStarted', code);
         io.to(code).emit('playerTurn', games[code].turn);
-        io.to(code).emit('setupBoard'); // Notify all players to setup the board
+        io.to(code).emit('setupBoard', { boardLayout: games[code].boardLayout, board: games[code].board } ); // Notify all players to setup the board
         socket.emit('playerColor', { color: 'white' }); // First player gets white
     });
 
     socket.on('joinGame', (code) => {
         if (games[code] && games[code].players.size < 2) {
         	const existingPlayerColor = games[code].players.entries().next().value
+        	console.log("existingPlayerColor:",existingPlayerColor)
         	const joiningPlayerColor = existingPlayerColor === 'black'? 'white' : 'black'
             games[code].players.set(socket.id, joiningPlayerColor); // Second player gets black
 
             socket.join(code);
-            io.to(code).emit('setupBoard'); // Notify all players to setup the board
+            io.to(code).emit('setupBoard', { boardLayout: games[code].boardLayout, board: games[code].board }); // Notify all players to setup the board
             socket.emit('playerColor', { color: joiningPlayerColor }); // Second player gets black
 
          	console.log(`Player ${socket.id} (${joiningPlayerColor}) joined game ${code}`);
@@ -84,14 +85,17 @@ io.on('connection', (socket) => {
             io.to(firstPlayerSocketId).emit('opponentJoined', { color: 'black' });
             io.to(code).emit('cellMarked', games[code].board);
         } else {
-        	console.log('Game not found or already full', games[code].players)
+        	console.log('Game not found or already full: ', code);
+        	if(games[code]) {
+        		console.log(games[code].players);
+        	}
             socket.emit('error', 'Game not found or already full');
         }
     });
 
 
     // Handle rolling dice
-    socket.on('rollDiceRequest', (keep) => {
+    socket.on('rollDiceRequest', ({ keep, bet }) => {
         //const currentGameCode = Object.keys(games).find(code => games[code].players.includes(socket.id));
         const currentGameCode = findGameCode(socket.id);
         console.log("rollDiceRequest GameCode: ", currentGameCode);
@@ -148,7 +152,6 @@ io.on('connection', (socket) => {
 
     // Handle marking a cell on the board
     socket.on('markCell', ({ index, player }) => {
-        //const currentGameCode = Object.keys(games).find(code => games[code].players.includes(socket.id));
     	const currentGameCode = findGameCode(socket.id)
         console.log(`markCell: ${player} trying to mark cell ${index}`);
 
@@ -258,7 +261,7 @@ io.on('connection', (socket) => {
 
 	function checkValidMoveHighLow(dices){
         const sum = dices.reduce((accumulatedSum, die) => accumulatedSum + die, 0);
-        if (!(sum < 9 || sum > 28)) throw new Error("Invalid move: High Low condition not met");
+        if (!(sum < 9 || sum > 26)) throw new Error("Invalid move: High Low condition not met");
 	}
 
 	function checkValidMoveStraight(dices) {
@@ -353,10 +356,12 @@ io.on('connection', (socket) => {
         const currentGameCode = findGameCode(socket.id)
         if (currentGameCode) {
 			const game = games[currentGameCode];
-			console.log("Disconnect... Cleaning up: ", game)
+			 console.log("players before cleanup: ", game.players);
+
             game.players.delete(socket.id); // Remove player from players map
             
             console.log(`Player ${socket.id} removed from game ${currentGameCode}`);
+            console.log("players after cleanup: ", game.players);
             
             if (games[currentGameCode].players.size === 0) { 
                 delete games[currentGameCode]; // Clean up if no players left in the game

@@ -4,23 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dice Game</title>
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+    <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
+    <link href="https://unpkg.com/nes.css@latest/css/nes.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
-    <h1>Dice Game</h1>
-    <button id="startGame">Start New Game</button>
-    <input type="text" id="gameCode" placeholder="Enter Game Code">
-    <button id="joinGame">Join Game</button>
+    <h1 class="nes-text is-success game-title">Yahtzingo</h1>
 
-    <div id="board"></div>
-    <div id="playerName"></div>
-    <div id="infoText"></div>
-    <div id="currentPlayersTurn"></div>
-    
-    <div id="remainingRolls"></div>
-    <div id="diceContainer"></div>
-    <button id="rollDiceButton" style="display:none;">Roll Dice</button>
+    <div class="game-options">
+        <button id="startGame" class="nes-btn is-success">Start New Game</button>
+        <div class="join-game">
+            <span>OR</span>
+            <input type="text" id="gameCode" placeholder="Enter Code">
+            <button id="joinGame" class="nes-btn nes-btn-small is-success">Join</button>    
+        </div>
+    </div>
+
+
+
+    <div id="boardContainer" class="nes-container is-rounded">
+        <div class="badge-container">
+            <a href="#" class="nes-badge is-splited left-badge">
+                <span class="is-success">black</span>
+                <span id="black-turn-indicator" class="is-dark"><</span>
+            </a>
+            <div id="playerName"></div>
+            <a href="#" class="nes-badge is-splited right-badge">
+                <span id="white-turn-indicator" class="is-dark">></span>
+                <span class="is-success">white</span>
+            </a>
+        </div>
+        <div id="board"></div>
+    </div>
+
+    <div id="controlls" class="nes-container is-rounded" style="visibility: hidden">
+
+        <div class="nes-select is-success">
+             <select id="betField" name="betField" class="nes-select is-warning">
+              <option value="">No Bet</option>
+              <option value="Four of a kind">Four of a kind</option>
+              <option value="Kniffel">Kniffel</option>
+              <option value="Full House">Full House</option>
+              <option value="Straight">Straight</option>
+              <option value="High Low">High Low</option>
+            </select>
+        </div>
+
+        <div id="infoText"></div>
+        <div id="currentPlayersTurn">
+            <span class="loader"></span>
+        </div>
+        <div id="remainingRolls"></div>
+        <div id="diceContainer"></div>
+        <button class="nes-btn is-success" id="rollDiceButton" style="display:none;">Roll Dice</button>
+    </div>
+
+
+
     <script src="/socket.io/socket.io.js"></script>
 
     <script src="client.js"></script>
