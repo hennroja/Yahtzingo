@@ -48,9 +48,9 @@ socket.on('playerTurn', (player) => {
         document.getElementById('white-turn-indicator').style.visibility = 'visible';
     }
     if(currentPlayer === playerColor) {
-        document.getElementById('rollDiceButton').style.display = 'block';
+        document.getElementById('controlActions').style.display = 'flex';
     } else {
-        document.getElementById('rollDiceButton').style.display = 'none';
+        document.getElementById('controlActions').style.display = 'none';
     }
     resetRolls();
 });
@@ -82,12 +82,11 @@ socket.on('diceRolled', ({ results, rollsLeft }) => {
 });
 
 socket.on('finalizeTurn', () => {
-    document.getElementById('rollDiceButton').style.display = 'none';
+    document.getElementById('controlActions').style.display = 'none';
 });
 
 // Handle keeping dice
 function keepDice(index) {
-    console.log("keep dice:", index)
     const keptDice = document.querySelectorAll('.dice');
     keptDice[index].classList.toggle('kept'); // Toggle kept class for visual feedback
 }
@@ -108,12 +107,11 @@ function finalizeTurn(index) {
 
 document.getElementById('rollDiceButton').onclick = () => {
     if (currentPlayer === playerColor) { // Ensure it's player's turn
-        console.log("Sending rollDiceRequest to server: ", playerColor)
+        console.log("Sending rollDiceRequest to server: ", playerColor);
         const keepArray = Array.from(document.querySelectorAll('.dice')).map(die => die.classList.contains('kept'));
         const betField = document.getElementById('betField').value;
-        // socket.emit('rollDiceRequest', keepArray); // Send which dice to keep to the server
         socket.emit('rollDiceRequest', { keep: keepArray, bet: betField || null });
-
+        document.getElementById('betField').value = '';
     } else {
         alert("It's not your turn!");
     }
@@ -128,11 +126,11 @@ function keepDice(index) {
 socket.on('unableToMark', ({ player }) => {
     // cant play
     document.getElementById('infoText').innerText = `You can't do any move! Other players will proceed.`
-    document.getElementById('diceContainer').classList.toggle('background-red');
+    document.getElementById('diceContainer').classList.toggle('red');
 
     setTimeout(function() {
          document.getElementById('infoText').innerText = ``; 
-         document.getElementById('diceContainer').classList.toggle('background-red');
+         document.getElementById('diceContainer').classList.toggle('red');
     }, 2500);
 });
 

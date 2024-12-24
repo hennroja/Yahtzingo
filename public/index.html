@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dice Game</title>
+    <title>Yahtzingo</title>
     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
-    <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
     <link href="https://unpkg.com/nes.css@latest/css/nes.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1 class="nes-text is-success game-title">Yahtzingo</h1>
+    <h1 class="game-title">Yahtzingo</h1>
 
     <div class="game-options">
         <button id="startGame" class="nes-btn is-success">Start New Game</button>
@@ -20,8 +19,6 @@
             <button id="joinGame" class="nes-btn nes-btn-small is-success">Join</button>    
         </div>
     </div>
-
-
 
     <div id="boardContainer" class="nes-container is-rounded">
         <div class="badge-container">
@@ -39,31 +36,28 @@
     </div>
 
     <div id="controlls" class="nes-container is-rounded" style="visibility: hidden">
-
-        <div class="nes-select is-success">
-             <select id="betField" name="betField" class="nes-select is-warning">
-              <option value="">No Bet</option>
-              <option value="Four of a kind">Four of a kind</option>
-              <option value="Kniffel">Kniffel</option>
-              <option value="Full House">Full House</option>
-              <option value="Straight">Straight</option>
-              <option value="High Low">High Low</option>
-            </select>
-        </div>
-
         <div id="infoText"></div>
         <div id="currentPlayersTurn">
             <span class="loader"></span>
         </div>
         <div id="remainingRolls"></div>
         <div id="diceContainer"></div>
-        <button class="nes-btn is-success" id="rollDiceButton" style="display:none;">Roll Dice</button>
+        <div id="controlActions" class="control-actions" style="display:none;">
+            <div class="nes-select is-success">
+                 <select id="betField" name="betField" class="nes-select is-warning">
+                      <option value="">No Bet</option>
+                      <option value="Four of a kind">Four of a kind</option>
+                      <option value="Kniffel">Kniffel</option>
+                      <option value="Full House">Full House</option>
+                      <option value="Straight">Straight</option>
+                      <option value="High Low">High Low</option>
+                </select>
+            </div>
+            <button class="nes-btn is-success" id="rollDiceButton">Roll Dice</button>
+        </div>
     </div>
 
-
-
     <script src="/socket.io/socket.io.js"></script>
-
     <script src="client.js"></script>
 </body>
 </html>

@@ -20,9 +20,9 @@ app.get('/', (req, res) => {
 function initializeBoardLayout() {
     return [
         [4, 5, 'Four of a kind', 2, 3],
-        [1, 'High Low', 'Straight', 'Cash', 6],
+        [1, 'High Low', 'Straight', 'Lucky Roll', 6],
         ['Straight', 'Bet', 'Kniffel', 'Full House', 'High Low'],
-        [5, 'Full House', 'Cash', 'Four of a kind', 2],
+        [5, 'Full House', 'Lucky Roll', 'Four of a kind', 2],
         [6, 4, 'Bet', 3, 1]
     ];
 }
@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
             boardLayout: initializeBoardLayout(), // Initialize the board
             board: initializeBoard(),
             rollsLeft: 3,
+            bet: null,
             currentDice: [0,0,0,0,0],
             keptDice: [false, false, false, false, false] // Track which dice are kept
         };
@@ -67,8 +68,9 @@ io.on('connection', (socket) => {
 
     socket.on('joinGame', (code) => {
         if (games[code] && games[code].players.size < 2) {
-        	const existingPlayerColor = games[code].players.entries().next().value
+        	const existingPlayerColor = games[code].players.entries().next().value[1]
         	console.log("existingPlayerColor:",existingPlayerColor)
+
         	const joiningPlayerColor = existingPlayerColor === 'black'? 'white' : 'black'
             games[code].players.set(socket.id, joiningPlayerColor); // Second player gets black
 
@@ -96,21 +98,30 @@ io.on('connection', (socket) => {
 
     // Handle rolling dice
     socket.on('rollDiceRequest', ({ keep, bet }) => {
-        //const currentGameCode = Object.keys(games).find(code => games[code].players.includes(socket.id));
+	    if (keep.length >= 4 && keep.every(Boolean)) {
+	        return;
+	    }
+
         const currentGameCode = findGameCode(socket.id);
-        console.log("rollDiceRequest GameCode: ", currentGameCode);
 
         if (currentGameCode && games[currentGameCode].rollsLeft > 0) {
-        	console.log("rollDiceRequest called");
+
+        	console.log(`rollDiceRequest for Game ${currentGameCode} keep (${keep}) and bet ${bet}`);
             const game = games[currentGameCode];
-            game.keptDice = keep; // Update which dice are kept
+
+            // if (game.bet !== null) { game.bet = null; } // reset old bet
+
+            game.keptDice = keep;
+            game.bet = bet
             lastDice = game.currentDice;
-            game.currentDice = rollDice(game.keptDice, lastDice); // Roll the dice based on kept status
-            game.rollsLeft--; // Decrease rolls left
+            game.currentDice = rollDice(game.keptDice, lastDice);
+            game.rollsLeft--;
+
+            if (bet !== null) { game.rollsLeft = 0; }
 
             // Emit rolled dice results to both players
             io.to(currentGameCode).emit('diceRolled', { results: game.currentDice, rollsLeft: game.rollsLeft });
-            
+
             if (game.rollsLeft === 0) {
                 io.to(currentGameCode).emit('finalizeTurn'); // Notify that turn is finalizing
                 try {
@@ -126,7 +137,7 @@ io.on('connection', (socket) => {
                 		game.turn = nextPlayer
             		    setTimeout(function() {
 							io.to(currentGameCode).emit('playerTurn', game.turn);
-						}, 2500);
+						}, 3000);
                 		
         			} else {
 
@@ -164,13 +175,14 @@ io.on('connection', (socket) => {
             const dices = game.currentDice;
             const rollsLeft = game.rollsLeft
             const player = game.players.get(socket.id)
+            const bet = game.bet
 
             // Example logic: mark cell based on index (you may want to adjust this)
             const rowIndex = Math.floor(index / 5);
             const colIndex = index % 5;
 
         	try {
-        		checkValidMove(player, dices, boardLayout, rowIndex, colIndex, rollsLeft);
+        		checkValidMove(player, dices, boardLayout, rowIndex, colIndex, rollsLeft, bet);
         		console.log(`checkValidMove is okay with the move.`);
         		board[rowIndex][colIndex] = player; // Mark cell with player identifier
                 io.to(currentGameCode).emit('cellMarked', board);
@@ -194,9 +206,13 @@ io.on('connection', (socket) => {
         }
     });
 
-    function checkValidMove(player, dices, boardLayout, rowIndex, colIndex, rollsLeft) {
+    function checkValidMove(player, dices, boardLayout, rowIndex, colIndex, rollsLeft, bet) {
+    	if (dices[0] === null) throw new Error("Invalid move: Marking before rolling the dices is not valid.");
 	    const cellValue = boardLayout[rowIndex][colIndex];
-	    if (dices[0] === null) throw new Error("Invalid move: Marking before rolling the dices is not valid.");
+	    checkValidMoveCell(player, dices, cellValue, rollsLeft, bet)
+	}
+
+    function checkValidMoveCell(player, dices, cellValue, rollsLeft, bet) {
 
 	    switch (cellValue) {
 	        case 1: // Number field (1)
@@ -228,7 +244,11 @@ io.on('connection', (socket) => {
 	        	checkValidMoveFullHouse(dices);
 	            break;
 
-	        case 'Cash':
+	        case 'Bet':
+	        	if (bet === null) throw new Error("No active Bet.");
+	        	checkValidMoveCell(player, dices, bet, rollsLeft, null)
+
+	        case 'Lucky Roll':
 	            if (rollsLeft !== 2) throw new Error("Invalid move: Cash can only be used on the with roll.");
 	            // If any other rule is valid for cash field
 	            var valid = false;
@@ -283,13 +303,13 @@ io.on('connection', (socket) => {
         if (!(valuesCount.includes(3) && valuesCount.includes(2))) throw new Error("Invalid move: Not a Full House");
 	}
 
-	function checkMovePossibleOnFinalTurn(player, dices, boardLayout, board) {
+	function checkMovePossibleOnFinalTurn(player, dices, boardLayout, board, bet) {
 		var possibleValidMoves = 0;
 	    board.forEach((row, rowIndex) => {
 	        row.forEach((cell, colIndex) => {
 	        	if(cell === null){
 	        		try {
-		        		checkValidMove(player, dices, boardLayout, rowIndex, colIndex, 0);
+		        		checkValidMove(player, dices, boardLayout, rowIndex, colIndex, 0, null);
 		        		console.log(`checkValidMove found for ${player}.`);
 		        		possibleValidMoves++;
 		        	} catch(error) {}
@@ -306,6 +326,7 @@ io.on('connection', (socket) => {
         game.rollsLeft = 3; // Reset rolls for next player
         game.currentDice = [null, null, null, null, null]; // Reset current dice
         game.keptDice.fill(false); // Reset kept dice status
+        game.bet = null
     }
 
     function checkWinner(board) {
