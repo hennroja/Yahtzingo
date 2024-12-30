@@ -246,10 +246,12 @@ io.on('connection', (socket) => {
 
 	        case 'Bet':
 	        	if (bet === null) throw new Error("No active Bet.");
+	   			console.log("bet: ", bet);
 	        	checkValidMoveCell(player, dices, bet, rollsLeft, null)
+	        	break;
 
 	        case 'Lucky Roll':
-	            if (rollsLeft !== 2) throw new Error("Invalid move: Cash can only be used on the with roll.");
+	            if (rollsLeft !== 2) throw new Error("Invalid move: Lucky Roll can only be used on the with roll.");
 	            // If any other rule is valid for cash field
 	            var valid = false;
 	            try { checkValidMoveFullHouse(dices); valid = true; } catch(err) {}
